@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "paymostats (debug)",
+      "type": "go",
+      "request": "launch",
+      "program": "${workspaceFolder}/cmd/paymostats",
+      "env": {
+        "PAYMOSTATS_TOKEN": "${env:PAYMOSTATS_TOKEN}"
+      },
+      "args": []
+    }
+  ]
+}
