@@ -9,6 +9,8 @@ import (
 
 	"github.com/Ma-Kas/paymostats/internal/api"
 	"github.com/Ma-Kas/paymostats/internal/report"
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 )
 
 func runMenu() error {
@@ -28,25 +30,24 @@ func runMenu() error {
 
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		fmt.Println("Check your Paymo stats")
-		fmt.Println("--------------------------")
+		fmt.Println()
+		fmt.Println(strings.ToUpper("Check your Paymo stats"))
+		fmt.Println(strings.Repeat("=", 40))
 		fmt.Println("a) Last two weeks")
 		fmt.Println("b) Last month")
 		fmt.Println("c) Last 3 months")
 		fmt.Println("d) Last 6 months")
 		fmt.Println("e) Forever")
 		fmt.Println("q) Quit")
-		fmt.Println("--------------------------")
+		fmt.Println(strings.Repeat("=", 40))
 		fmt.Print("> ")
 
 		input, _ := reader.ReadString('\n')
 		choice := strings.TrimSpace(strings.ToLower(input))
-
 		if choice == "q" {
 			fmt.Println("Bye!")
 			return nil
 		}
-
 		spec, ok := choices[choice]
 		if !ok {
 			fmt.Println("Unknown option, try again.")
@@ -67,7 +68,7 @@ func runRange(c *api.Client, userID int, label string, start, end time.Time) err
 		return fmt.Errorf("fetch entries: %w", err)
 	}
 	if len(entries) == 0 {
-		fmt.Printf("No entries found for %s (%s → %s)\n",
+		fmt.Printf("No entries found for %s (%s to %s)\n",
 			label, start.Format("2006-01-02"), end.Format("2006-01-02"))
 		return nil
 	}
@@ -79,11 +80,30 @@ func runRange(c *api.Client, userID int, label string, start, end time.Time) err
 
 	rows, totalHours := report.Build(entries, projects)
 
-	fmt.Printf("\n%s — %s → %s  (Total: %.2f hrs)\n",
-		label, start.Format("2006-01-02"), end.Format("2006-01-02"), totalHours)
-	fmt.Println("--------------------------")
+	// Build the table
+	tw := table.NewWriter()
+	tw.SetOutputMirror(os.Stdout)
+	tw.SetStyle(table.StyleLight)
+	tw.Style().Format.Header = text.FormatTitle
+	tw.SetTitle(fmt.Sprintf("%s\n%s to %s",
+		strings.ToUpper(label),
+		start.Format("2006-01-02"),
+		end.Format("2006-01-02"),
+	))
+
+	tw.AppendHeader(table.Row{strings.ToUpper("Project"), strings.ToUpper("Hours"), strings.ToUpper("Percent")})
 	for _, r := range rows {
-		fmt.Printf("%-30s %6.2f%%  (%5.1f hrs)\n", r.Name, r.Percent, r.Hours)
+		tw.AppendRow(table.Row{r.Name, fmt.Sprintf("%.1f", r.Hours), fmt.Sprintf("%.1f%%", r.Percent)})
 	}
+
+	tw.AppendSeparator()
+
+	pctSum := 0.0
+	for _, r := range rows {
+		pctSum += r.Percent
+	}
+	tw.AppendFooter(table.Row{"", fmt.Sprintf("%.1f hrs", totalHours), fmt.Sprintf("%.1f%%", pctSum)})
+
+	tw.Render()
 	return nil
 }

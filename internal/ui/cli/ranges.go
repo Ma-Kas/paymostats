@@ -10,7 +10,7 @@ type rangeSpec struct {
 var choices = map[string]rangeSpec{
 	"a": {"Last two weeks", 14},
 	"b": {"Last month", 30},
-	"c": {"Last 3 months", 30},
+	"c": {"Last 3 months", 90},
 	"d": {"Last 6 months", 180},
 	"e": {"Forever", 0},
 }
