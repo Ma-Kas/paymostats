@@ -8,16 +8,20 @@ import (
 	"time"
 
 	"github.com/Ma-Kas/paymostats/internal/api"
+	"github.com/Ma-Kas/paymostats/internal/config"
 	"github.com/Ma-Kas/paymostats/internal/report"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 )
 
 func runMenu() error {
-	token := os.Getenv("PAYMOSTATS_TOKEN")
-	if token == "" {
-		fmt.Println("Set PAYMOSTATS_TOKEN first (export PAYMOSTATS_TOKEN=...)")
+	token, err := config.ResolveToken()
+	if err == config.ErrNoToken {
+		fmt.Println("No API key found, please run `paymostats login` first.")
 		return nil
+	}
+	if err != nil {
+		return err
 	}
 	client := api.NewClient(token)
 	// client.EnableDebug()
