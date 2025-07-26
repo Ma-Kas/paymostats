@@ -7,7 +7,7 @@
       "request": "launch",
       "program": "${workspaceFolder}/cmd/paymostats",
       "env": {
-        "PAYMOSTATS_TOKEN": "${env:PAYMOSTATS_TOKEN}"
+        "PAYMOSTATS_API_KEY": "${env:PAYMOSTATS_API_KEY}"
       },
       "args": []
     }

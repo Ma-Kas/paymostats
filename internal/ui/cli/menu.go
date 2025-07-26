@@ -15,15 +15,15 @@ import (
 )
 
 func runMenu() error {
-	token, err := config.ResolveToken()
-	if err == config.ErrNoToken {
+	apiKey, err := config.ResolveApiKey()
+	if err == config.ErrNoApiKey {
 		fmt.Println("No API key found, please run `paymostats login` first.")
 		return nil
 	}
 	if err != nil {
 		return err
 	}
-	client := api.NewClient(token)
+	client := api.NewClient(apiKey)
 	// client.EnableDebug()
 
 	userID, err := client.Me()

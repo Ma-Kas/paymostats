@@ -19,12 +19,12 @@ var loginCmd = &cobra.Command{
 	Use:   "login",
 	Short: "Store your Paymo API key securely in the macOS Keychain",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// If a token already exists and the user explicitly ran `paymostats login`,
-		// offer to replace it.
-		if tok, err := config.ResolveToken(); err == nil && tok != "" {
+		// If an api key already exists and the user explicitly ran `paymostats login`,
+		// offer to replace it
+		if tok, err := config.ResolveApiKey(); err == nil && tok != "" {
 			fmt.Println("You're already logged in.")
 			fmt.Println(strings.Repeat("=", 40))
-			fmt.Println("a) Login with different token")
+			fmt.Println("a) Login with different API key")
 			fmt.Println("q) Quit")
 			fmt.Println(strings.Repeat("=", 40))
 			fmt.Print("> ")
@@ -35,8 +35,8 @@ var loginCmd = &cobra.Command{
 			if choice != "a" {
 				return api.ErrLoginAborted
 			}
-			// user wants to replace the token → delete it so we don't loop back
-			_ = config.DeleteToken()
+			// user wants to replace the api key - delete it so we don't loop back
+			_ = config.DeleteApiKey()
 		}
 
 		reader := bufio.NewReader(os.Stdin)
@@ -47,14 +47,14 @@ var loginCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			token := strings.TrimSpace(line)
+			apiKey := strings.TrimSpace(line)
 
 			// allow a quick way out
-			if token == "" {
+			if apiKey == "" {
 				return api.ErrLoginAborted
 			}
 
-			client := api.NewClient(token)
+			client := api.NewClient(apiKey)
 			if _, err := client.Me(); err != nil {
 				if errors.Is(err, api.ErrUnauthorized) {
 					fmt.Printf("That key is invalid (401). Try again (%d/%d), or press ENTER to abort.\n", attempts, maxLoginAttempts)
@@ -63,7 +63,7 @@ var loginCmd = &cobra.Command{
 				return fmt.Errorf("could not validate key: %w", err)
 			}
 
-			if err := config.SaveToken(token); err != nil {
+			if err := config.SaveApiKey(apiKey); err != nil {
 				return err
 			}
 			fmt.Println("Saved in your Keychain")

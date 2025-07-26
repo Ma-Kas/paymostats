@@ -14,7 +14,7 @@ var logoutCmd = &cobra.Command{
 	Use:   "logout",
 	Short: "Remove your stored Paymo API key from the Keychain",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := config.DeleteToken(); err != nil {
+		if err := config.DeleteApiKey(); err != nil {
 			if err == keyring.ErrNotFound {
 				fmt.Println("No API key stored.")
 				return nil

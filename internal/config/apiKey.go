@@ -9,28 +9,28 @@ import (
 
 const (
 	service = "paymostats"
-	account = "token"
+	account = "apiKey"
 )
 
-var ErrNoToken = errors.New("no token configured")
+var ErrNoApiKey = errors.New("no api key configured")
 
-func ResolveToken() (string, error) {
+func ResolveApiKey() (string, error) {
 	// env (mainly useful for dev)
-	if v := os.Getenv("PAYMOSTATS_TOKEN"); v != "" {
+	if v := os.Getenv("PAYMOSTATS_API_KEY"); v != "" {
 		return v, nil
 	}
 	// Keychain
 	v, err := keyring.Get(service, account)
 	if err == keyring.ErrNotFound {
-		return "", ErrNoToken
+		return "", ErrNoApiKey
 	}
 	return v, err
 }
 
-func SaveToken(tok string) error {
+func SaveApiKey(tok string) error {
 	return keyring.Set(service, account, tok)
 }
 
-func DeleteToken() error {
+func DeleteApiKey() error {
 	return keyring.Delete(service, account)
 }

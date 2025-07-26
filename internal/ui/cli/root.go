@@ -14,8 +14,8 @@ var rootCmd = &cobra.Command{
 	Use:   "paymostats",
 	Short: "Check your Paymo stats",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		token, err := config.ResolveToken()
-		if err == config.ErrNoToken {
+		apiKey, err := config.ResolveApiKey()
+		if err == config.ErrNoApiKey {
 			fmt.Println("No API key found, let's log you in.")
 			if err := loginCmd.RunE(cmd, args); err != nil {
 				if errors.Is(err, api.ErrLoginAborted) {
@@ -24,7 +24,7 @@ var rootCmd = &cobra.Command{
 				return err
 			}
 			// re-resolve after successful login
-			token, err = config.ResolveToken()
+			apiKey, err = config.ResolveApiKey()
 			if err != nil {
 				return err
 			}
@@ -32,8 +32,8 @@ var rootCmd = &cobra.Command{
 			return err
 		}
 
-		// Validate token to handle 401 case immediately
-		client := api.NewClient(token)
+		// Validate api key to handle 401 case immediately
+		client := api.NewClient(apiKey)
 		if _, err := client.Me(); err != nil {
 			if errors.Is(err, api.ErrUnauthorized) {
 				fmt.Println("Your stored API key is invalid or expired.")
@@ -45,8 +45,8 @@ var rootCmd = &cobra.Command{
 				fmt.Scanln(&choice)
 				switch strings.ToLower(strings.TrimSpace(choice)) {
 				case "a":
-					// Drop old token to avoid going "already logged in" path
-					_ = config.DeleteToken()
+					// Drop old apiKey to avoid going "already logged in" path
+					_ = config.DeleteApiKey()
 
 					if err := loginCmd.RunE(cmd, args); err != nil {
 						if errors.Is(err, api.ErrLoginAborted) {
