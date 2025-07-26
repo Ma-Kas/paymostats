@@ -18,7 +18,7 @@ import (
 func runMenu() error {
 	apiKey, err := config.ResolveApiKey()
 	if err == config.ErrNoApiKey {
-		fmt.Println("No API key found, please run `paymostats login` first.")
+		fmt.Println("No API key found, please run `paymostats login` first")
 		return nil
 	}
 	if err != nil {

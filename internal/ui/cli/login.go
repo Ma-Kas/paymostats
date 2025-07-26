@@ -15,14 +15,41 @@ import (
 
 const maxLoginAttempts = 3
 
+// flag for login
+var loginAPIKey string
+
 var loginCmd = &cobra.Command{
-	Use:   "login",
-	Short: "Store your Paymo API key securely in the macOS Keychain",
+	Use:   "login [flags]",
+	Short: "Store your Paymo API key in the macOS Keychain",
+	Long: `Validate and store your Paymo API key securely in the macOS Keychain.
+
+If --api-key is provided, it will be validated and stored immediately (overwriting any existing key). 
+If not provided, you'll be prompted interactively.`,
+	Example: `  paymostats login --api-key 1234567890abcdef
+  paymostats login`,
+	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Fast path: flag provided -> validate -> overwrite without prompting
+		if strings.TrimSpace(loginAPIKey) != "" {
+			key := strings.TrimSpace(loginAPIKey)
+			client := api.NewClient(key)
+			if _, err := client.Me(); err != nil {
+				if errors.Is(err, api.ErrUnauthorized) {
+					return fmt.Errorf("the provided API key is invalid (401)")
+				}
+				return fmt.Errorf("could not validate API key: %w", err)
+			}
+			if err := config.SaveApiKey(key); err != nil {
+				return fmt.Errorf("failed to save API key: %w", err)
+			}
+			fmt.Println("Saved in your Keychain")
+			return nil
+		}
+
+		// Interactive path (no --api-key flag)
 		reader := bufio.NewReader(os.Stdin)
 
-		// If an api key already exists and the user explicitly ran `paymostats login`,
-		// offer to replace it
+		// If an api key already exists, offer to replace it
 		if key, err := config.ResolveApiKey(); err == nil && key != "" {
 			fmt.Println("You're already logged in")
 			fmt.Println(strings.Repeat("=", 40))
@@ -77,4 +104,9 @@ var loginCmd = &cobra.Command{
 		fmt.Println("Too many failed attempts. Aborting.")
 		return nil
 	},
+}
+
+func init() {
+	// Bind subcommand flags here (keeps them co-located to the command)
+	loginCmd.Flags().StringVarP(&loginAPIKey, "api-key", "k", "", "Paymo API key (validated and stored)")
 }

@@ -16,7 +16,7 @@ var logoutCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := config.DeleteApiKey(); err != nil {
 			if err == keyring.ErrNotFound {
-				fmt.Println("No API key stored.")
+				fmt.Println("No API key stored")
 				return nil
 			}
 			return err
