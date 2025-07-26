@@ -1,0 +1,54 @@
+version: 2
+
+project_name: paymostats
+
+builds:
+  - id: paymostats
+    main: ./cmd/paymostats
+    env:
+      - CGO_ENABLED=0
+    goos: [darwin, linux, windows]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w
+    flags:
+      - -trimpath
+
+archives:
+  - id: archive
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+      - formats: ['zip']
+
+checksum:
+  name_template: 'checksums.txt'
+
+release:
+  # let goreleaser create a GitHub Release on tags
+  prerelease: false
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs?:'
+      - '^chore:'
+      - '^test:'
+
+homebrew_casks:
+  - name: paymostats
+    repository:
+      owner: Ma-Kas
+      name: homebrew-tap
+    homepage: 'https://github.com/Ma-Kas/paymostats'
+    description: 'Small CLI tool to display Paymo stats within a given range'
+    license: 'MIT'
+    binary: 'paymostats'
+    # Remove quarantine bit if don't sign/notarize yet
+    hooks:
+      post:
+        install: |
+          if system_command("/usr/bin/xattr", args: ["-h"]).exit_status == 0
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/paymostats"]
+          end

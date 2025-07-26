@@ -1,0 +1,33 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*' # only run on tags like v0.1.0, v1.2.3
+
+permissions:
+  contents: write # needed to create GitHub Releases
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: '~> v2'
+          args: release --clean
+        env:
+          # Built-in token is fine for Releases in this repo
+          # but to push to the tap must provide a PAT with repo scope:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
