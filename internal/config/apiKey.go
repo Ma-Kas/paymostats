@@ -27,8 +27,8 @@ func ResolveApiKey() (string, error) {
 	return v, err
 }
 
-func SaveApiKey(tok string) error {
-	return keyring.Set(service, account, tok)
+func SaveApiKey(key string) error {
+	return keyring.Set(service, account, key)
 }
 
 func DeleteApiKey() error {

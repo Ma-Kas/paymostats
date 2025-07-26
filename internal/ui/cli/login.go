@@ -19,58 +19,62 @@ var loginCmd = &cobra.Command{
 	Use:   "login",
 	Short: "Store your Paymo API key securely in the macOS Keychain",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		reader := bufio.NewReader(os.Stdin)
+
 		// If an api key already exists and the user explicitly ran `paymostats login`,
 		// offer to replace it
-		if tok, err := config.ResolveApiKey(); err == nil && tok != "" {
-			fmt.Println("You're already logged in.")
+		if key, err := config.ResolveApiKey(); err == nil && key != "" {
+			fmt.Println("You're already logged in")
 			fmt.Println(strings.Repeat("=", 40))
 			fmt.Println("a) Login with different API key")
 			fmt.Println("q) Quit")
 			fmt.Println(strings.Repeat("=", 40))
-			fmt.Print("> ")
+			fmt.Print(">> ")
 
-			reader := bufio.NewReader(os.Stdin)
-			line, _ := reader.ReadString('\n')
-			choice := strings.ToLower(strings.TrimSpace(line))
+			choice, _ := readChoice(reader)
 			if choice != "a" {
-				return api.ErrLoginAborted
+				return nil
 			}
-			// user wants to replace the api key - delete it so we don't loop back
+			// user wants to replace the api key - delete it to avoid looping
 			_ = config.DeleteApiKey()
 		}
 
-		reader := bufio.NewReader(os.Stdin)
-
+		// Prompt for the key
 		for attempts := 1; attempts <= maxLoginAttempts; attempts++ {
 			fmt.Print("Paste your Paymo API key (press ENTER to cancel): ")
 			line, err := reader.ReadString('\n')
 			if err != nil {
-				return err
+				if err != nil {
+					// Unexpected I/O error
+					return fmt.Errorf("read input: %w", err)
+				}
 			}
 			apiKey := strings.TrimSpace(line)
 
-			// allow a quick way out
+			// Allow a quick way out
 			if apiKey == "" {
-				return api.ErrLoginAborted
+				fmt.Println("Canceled")
+				return nil
+
 			}
 
 			client := api.NewClient(apiKey)
 			if _, err := client.Me(); err != nil {
 				if errors.Is(err, api.ErrUnauthorized) {
-					fmt.Printf("That key is invalid (401). Try again (%d/%d), or press ENTER to abort.\n", attempts, maxLoginAttempts)
+					fmt.Printf("API key is invalid. Try again (%d/%d), or press ENTER to abort.\n", attempts, maxLoginAttempts)
 					continue
 				}
-				return fmt.Errorf("could not validate key: %w", err)
+				return fmt.Errorf("Could not validate key: %v\n", err)
 			}
 
 			if err := config.SaveApiKey(apiKey); err != nil {
-				return err
+				return fmt.Errorf("Failed to save API key: %v\n", err)
 			}
 			fmt.Println("Saved in your Keychain")
 			return nil
 		}
 
 		fmt.Println("Too many failed attempts. Aborting.")
-		return api.ErrLoginAborted
+		return nil
 	},
 }

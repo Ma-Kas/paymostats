@@ -43,16 +43,15 @@ func runMenu() error {
 		fmt.Println("c) Last month")
 		fmt.Println("d) Last 3 months")
 		fmt.Println("e) Last 6 months")
-		fmt.Println("f) All time")
+		fmt.Println("f) Year to date")
+		fmt.Println("g) All time")
 		fmt.Println(strings.Repeat("-", 40))
 		fmt.Println("q) Quit")
 		fmt.Println(strings.Repeat("=", 40))
-		fmt.Print("> ")
+		fmt.Print(">> ")
 
-		input, _ := reader.ReadString('\n')
-		choice := strings.TrimSpace(strings.ToLower(input))
+		choice, _ := readChoice(reader)
 		if choice == "q" {
-			fmt.Println("Bye!")
 			return nil
 		}
 		spec, ok := choices[choice]
@@ -61,7 +60,7 @@ func runMenu() error {
 			continue
 		}
 
-		start, end := bounds(spec.days)
+		start, end := bounds(spec)
 		if err := runRange(client, userID, spec.label, start, end); err != nil {
 			fmt.Println("Error:", err)
 		}
@@ -85,8 +84,7 @@ func runRange(c *api.Client, userID int, label string, start, end time.Time) err
 		return fmt.Errorf("fetch projects: %w", err)
 	}
 
-	// If this is the "all time" case (you passed Unix 0 as start),
-	// replace the caption's start date with the earliest entry we actually have.
+	// For "All Time" case, replace caption start date with earliest actual entry time
 	displayStart := start
 	if start.Unix() == 0 {
 		minTS := int64(math.MaxInt64)
