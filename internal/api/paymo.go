@@ -35,26 +35,14 @@ type Project struct {
 	Name string `json:"name"`
 }
 
+// Return the current user id
 func (c *Client) Me() (int, error) {
 	req, _ := http.NewRequest("GET", "https://app.paymoapp.com/api/me", nil)
-	req.SetBasicAuth(c.apiKey, "X")
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return 0, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		b, _ := io.ReadAll(resp.Body)
-		return 0, fmt.Errorf("GET /me: %s - %s", resp.Status, string(b))
-	}
 
 	var out struct {
 		Users []User `json:"users"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+	if err := c.do(req, &out); err != nil {
 		return 0, err
 	}
 	if len(out.Users) == 0 {
@@ -63,6 +51,7 @@ func (c *Client) Me() (int, error) {
 	return out.Users[0].ID, nil
 }
 
+// Fetch time entries for a user within [start, end] using time_interval
 func (c *Client) Entries(userID int, start, end time.Time) ([]TimeEntry, error) {
 	u, _ := url.Parse("https://app.paymoapp.com/api/entries")
 
@@ -77,49 +66,24 @@ func (c *Client) Entries(userID int, start, end time.Time) ([]TimeEntry, error) 
 	u.RawQuery = q.Encode()
 
 	req, _ := http.NewRequest("GET", u.String(), nil)
-	req.SetBasicAuth(c.apiKey, "X")
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		b, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("GET /entries: %s - %s", resp.Status, string(b))
-	}
 
 	var out struct {
 		Entries []TimeEntry `json:"entries"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+	if err := c.do(req, &out); err != nil {
 		return nil, err
 	}
 	return out.Entries, nil
 }
 
+// Return a map of projectID to projectName
 func (c *Client) Projects() (map[int]string, error) {
 	req, _ := http.NewRequest("GET", "https://app.paymoapp.com/api/projects", nil)
-	req.SetBasicAuth(c.apiKey, "X")
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		b, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("GET /projects: %s - %s", resp.Status, string(b))
-	}
 
 	var out struct {
 		Projects []Project `json:"projects"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+	if err := c.do(req, &out); err != nil {
 		return nil, err
 	}
 
@@ -128,4 +92,32 @@ func (c *Client) Projects() (map[int]string, error) {
 		m[p.ID] = p.Name
 	}
 	return m, nil
+}
+
+// Centralize HTTP call, parse JSON, and maps 401/403 to ErrUnauthorized (wrapped).
+func (c *Client) do(req *http.Request, out any) error {
+	req.SetBasicAuth(c.apiKey, "X")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		if out == nil {
+			return nil
+		}
+		return json.Unmarshal(body, out)
+
+	case http.StatusUnauthorized, http.StatusForbidden: // 401/403
+		return fmt.Errorf("%w: %s", ErrUnauthorized, resp.Status)
+
+	default:
+		return fmt.Errorf("api %s: %s", resp.Status, string(body))
+	}
 }
