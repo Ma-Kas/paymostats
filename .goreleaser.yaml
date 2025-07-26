@@ -45,6 +45,8 @@ homebrew_casks:
     description: 'Small CLI tool to display Paymo stats within a given range'
     license: 'MIT'
     binary: 'paymostats'
+    custom_block: |
+      name "Paymostats"
     # Remove quarantine bit if don't sign/notarize yet
     hooks:
       post:
