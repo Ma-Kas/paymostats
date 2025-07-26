@@ -3,6 +3,7 @@ package cli
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"os"
 	"strings"
 	"time"
@@ -24,7 +25,7 @@ func runMenu() error {
 		return err
 	}
 	client := api.NewClient(apiKey)
-	// client.EnableDebug()
+	// client.EnableDebug() // Uncomment for verbose HTTP dumps
 
 	userID, err := client.Me()
 	if err != nil {
@@ -35,13 +36,15 @@ func runMenu() error {
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Println()
-		fmt.Println(strings.ToUpper("Check your Paymo stats"))
+		fmt.Println(strings.ToUpper("Display your Paymo stats"))
 		fmt.Println(strings.Repeat("=", 40))
-		fmt.Println("a) Last two weeks")
-		fmt.Println("b) Last month")
-		fmt.Println("c) Last 3 months")
-		fmt.Println("d) Last 6 months")
-		fmt.Println("e) Forever")
+		fmt.Println("a) Last week")
+		fmt.Println("b) Last two weeks")
+		fmt.Println("c) Last month")
+		fmt.Println("d) Last 3 months")
+		fmt.Println("e) Last 6 months")
+		fmt.Println("f) All time")
+		fmt.Println(strings.Repeat("-", 40))
 		fmt.Println("q) Quit")
 		fmt.Println(strings.Repeat("=", 40))
 		fmt.Print("> ")
@@ -82,6 +85,28 @@ func runRange(c *api.Client, userID int, label string, start, end time.Time) err
 		return fmt.Errorf("fetch projects: %w", err)
 	}
 
+	// If this is the "all time" case (you passed Unix 0 as start),
+	// replace the caption's start date with the earliest entry we actually have.
+	displayStart := start
+	if start.Unix() == 0 {
+		minTS := int64(math.MaxInt64)
+		for _, e := range entries {
+			if e.StartTime != nil {
+				if ts := int64(*e.StartTime); ts < minTS {
+					minTS = ts
+				}
+			}
+			if e.Date != nil {
+				if ts := int64(*e.Date); ts < minTS {
+					minTS = ts
+				}
+			}
+		}
+		if minTS != int64(math.MaxInt64) {
+			displayStart = time.Unix(minTS, 0).UTC()
+		}
+	}
+
 	rows, totalHours := report.Build(entries, projects)
 
 	// Build the table
@@ -91,7 +116,7 @@ func runRange(c *api.Client, userID int, label string, start, end time.Time) err
 	tw.Style().Format.Header = text.FormatTitle
 	tw.SetTitle(fmt.Sprintf("%s\n%s to %s",
 		strings.ToUpper(label),
-		start.Format("2006-01-02"),
+		displayStart.Format("2006-01-02"),
 		end.Format("2006-01-02"),
 	))
 

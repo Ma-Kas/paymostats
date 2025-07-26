@@ -12,7 +12,7 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "paymostats",
-	Short: "Check your Paymo stats",
+	Short: "Display your Paymo stats",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		apiKey, err := config.ResolveApiKey()
 		if err == config.ErrNoApiKey {

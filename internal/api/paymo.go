@@ -6,8 +6,60 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 )
+
+// UnixTS is a UNIX timestamp that can be unmarshaled from either a JSON number
+// or a quoted JSON string (e.g. 1712345678 or "1712345678")
+type UnixTS int64
+
+// Paymo API is inconsistent in the date format, so need to handle with extended unmarshal
+func (u *UnixTS) UnmarshalJSON(b []byte) error {
+	if string(b) == "null" {
+		return nil
+	}
+
+	// Decode into interface{} first so we can branch by actual JSON type.
+	var v any
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+
+	switch vv := v.(type) {
+	case float64: // raw JSON number
+		*u = UnixTS(int64(vv))
+		return nil
+
+	case string: // could be numeric or an ISO/RFC3339 date/time
+		if vv == "" {
+			return nil
+		}
+
+		// Try numeric first
+		if i, err := strconv.ParseInt(vv, 10, 64); err == nil {
+			*u = UnixTS(i)
+			return nil
+		}
+
+		// Try RFC3339
+		if t, err := time.Parse(time.RFC3339, vv); err == nil {
+			*u = UnixTS(t.Unix())
+			return nil
+		}
+
+		// Try date-only (YYYY-MM-DD)
+		if t, err := time.Parse("2006-01-02", vv); err == nil {
+			*u = UnixTS(t.Unix())
+			return nil
+		}
+
+		return fmt.Errorf("unsupported timestamp format: %q", vv)
+
+	default:
+		return fmt.Errorf("unsupported JSON type for UnixTS: %T", vv)
+	}
+}
 
 type Client struct {
 	apiKey string
@@ -28,6 +80,10 @@ type User struct {
 type TimeEntry struct {
 	ProjectID int     `json:"project_id"`
 	Duration  float64 `json:"duration"` // seconds
+
+	// Paymo may send these as numbers or as strings – handle both with UnixTS
+	StartTime *UnixTS `json:"start_time,omitempty"`
+	Date      *UnixTS `json:"date,omitempty"`
 }
 
 type Project struct {

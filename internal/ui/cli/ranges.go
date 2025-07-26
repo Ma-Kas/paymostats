@@ -4,15 +4,16 @@ import "time"
 
 type rangeSpec struct {
 	label string
-	days  int // 0 = forever
+	days  int // 0 = all time
 }
 
 var choices = map[string]rangeSpec{
-	"a": {"Last two weeks", 14},
-	"b": {"Last month", 30},
-	"c": {"Last 3 months", 90},
-	"d": {"Last 6 months", 180},
-	"e": {"Forever", 0},
+	"a": {"Last week", 7},
+	"b": {"Last two weeks", 14},
+	"c": {"Last month", 30},
+	"d": {"Last 3 months", 90},
+	"e": {"Last 6 months", 180},
+	"f": {"All Time", 0},
 }
 
 func bounds(days int) (time.Time, time.Time) {
